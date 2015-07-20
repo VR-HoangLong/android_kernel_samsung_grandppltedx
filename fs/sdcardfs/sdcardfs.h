@@ -93,8 +93,8 @@
 
 #define fix_derived_permission(x)	\
 	do {						\
-		(x)->i_uid = SDCARDFS_I(x)->d_uid;	\
-		(x)->i_gid = SDCARDFS_I(x)->d_gid;	\
+		(x)->i_uid = make_kuid(&init_user_ns, SDCARDFS_I(x)->d_uid);	\
+		(x)->i_gid = make_kgid(&init_user_ns, SDCARDFS_I(x)->d_gid);	\
 		(x)->i_mode = ((x)->i_mode & S_IFMT) | SDCARDFS_I(x)->d_mode;\
 	} while (0)
 
@@ -184,7 +184,9 @@ extern void sdcardfs_destroy_dentry_cache(void);
 extern int new_dentry_private_data(struct dentry *dentry);
 extern void free_dentry_private_data(struct dentry *dentry);
 extern struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
-				    struct nameidata *nd);
+				unsigned int flags);
+extern struct inode *sdcardfs_iget(struct super_block *sb,
+				 struct inode *lower_inode);
 extern int sdcardfs_interpose(struct dentry *dentry, struct super_block *sb,
 			    struct path *lower_path);
 
@@ -455,16 +457,9 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 	struct dentry *dent;
 	struct path path;
 	struct iattr attrs;
-	struct nameidata nd;
+	struct path parent;
 
-	err = kern_path_parent(path_s, &nd);
-	if (err) {
-		if (err == -EEXIST)
-			err = 0;
-		goto out;
-	}
-
-	dent = lookup_create(&nd, 1);
+	dent = kern_path_locked(path_s, &parent);
 	if (IS_ERR(dent)) {
 		err = PTR_ERR(dent);
 		if (err == -EEXIST)
@@ -472,18 +467,18 @@ static inline int prepare_dir(const char *path_s, uid_t uid, gid_t gid, mode_t m
 		return err;
 	}
 
-	err = vfs_mkdir(nd.path.dentry->d_inode, dent, mode);
+	err = vfs_mkdir(parent.dentry->d_inode, dent, mode);
 	if (err) {
 		if (err == -EEXIST)
 			err = 0;
 		goto out_drop;
 	}
 
-	attrs.ia_uid = uid;
-	attrs.ia_gid = gid;
+	attrs.ia_uid = make_kuid(&init_user_ns, uid);
+	attrs.ia_gid = make_kgid(&init_user_ns, gid);
 	attrs.ia_valid = ATTR_UID | ATTR_GID;
 	mutex_lock(&dent->d_inode->i_mutex);
-	notify_change(dent, &attrs);
+	notify_change(dent, &attrs, NULL);
 	mutex_unlock(&dent->d_inode->i_mutex);
 
 out_drop:
@@ -491,10 +486,8 @@ out_drop:
 
 out_unlock:
 	/* parent dentry locked by lookup_create */
-	mutex_unlock(&nd.path.dentry->d_inode->i_mutex);
-	path_put(&nd.path);
-
-out:
+	mutex_unlock(&parent.dentry->d_inode->i_mutex);
+	path_put(&parent);
 	return err;
 }
 
