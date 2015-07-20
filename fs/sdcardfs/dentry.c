@@ -26,7 +26,7 @@
  *          0: tell VFS to invalidate dentry
  *          1: dentry is valid
  */
-static int sdcardfs_d_revalidate(struct dentry *dentry, unsigned int flags)
+static int sdcardfs_d_revalidate(struct dentry *dentry, struct nameidata *nd)
 {
 	int err = 1;
 	struct path parent_lower_path, lower_path;
@@ -35,7 +35,7 @@ static int sdcardfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 	struct dentry *lower_cur_parent_dentry = NULL;
 	struct dentry *lower_dentry = NULL;
 
-	if (flags & LOOKUP_RCU)
+	if (nd && nd->flags & LOOKUP_RCU)
 		return -ECHILD;
 
 	spin_lock(&dentry->d_lock);
@@ -71,12 +71,6 @@ static int sdcardfs_d_revalidate(struct dentry *dentry, unsigned int flags)
 	if (parent_lower_dentry != lower_cur_parent_dentry) {
 		d_drop(dentry);
 		err = 0;
-		goto out;
-	}
-
-	if (dentry == lower_dentry) {
-		err = 0;
-		panic("sdcardfs: dentry is equal to lower_dentry\n");
 		goto out;
 	}
 
@@ -124,8 +118,8 @@ static void sdcardfs_d_release(struct dentry *dentry)
 	return;
 }
 
-static int sdcardfs_hash_ci(const struct dentry *dentry, 
-				struct qstr *qstr)
+static int sdcardfs_hash_ci(const struct dentry *dentry,
+				const struct inode *inode, struct qstr *qstr)
 {
 	/* 
 	 * This function is copy of vfat_hashi.
@@ -153,9 +147,10 @@ static int sdcardfs_hash_ci(const struct dentry *dentry,
 /*
  * Case insensitive compare of two vfat names.
  */
-static int sdcardfs_cmp_ci(const struct dentry *parent, 
-		const struct dentry *dentry, unsigned int len,
-		const char *str, const struct qstr *name)
+static int sdcardfs_cmp_ci(const struct dentry *parent,
+		const struct inode *pinode,
+		const struct dentry *dentry, const struct inode *inode,
+		unsigned int len, const char *str, const struct qstr *name)
 {
 	/* This function is copy of vfat_cmpi */
 	// FIXME Should we support national language? 

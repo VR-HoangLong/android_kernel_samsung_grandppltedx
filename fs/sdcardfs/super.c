@@ -130,7 +130,7 @@ static void sdcardfs_evict_inode(struct inode *inode)
 	struct inode *lower_inode;
 
 	truncate_inode_pages(&inode->i_data, 0);
-	clear_inode(inode);
+	end_writeback(inode);
 	/*
 	 * Decrement a reference to a lower_inode, which was incremented
 	 * by our read_inode when it was created initially.
@@ -251,23 +251,23 @@ static void sdcardfs_umount_begin(struct super_block *sb)
 		lower_sb->s_op->umount_begin(lower_sb);
 }
 
-static int sdcardfs_show_options(struct seq_file *m, struct dentry *root)
+static int sdcardfs_show_options(struct seq_file *m, struct vfsmount *mnt)
 {
-	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(root->d_sb);
+	struct sdcardfs_sb_info *sbi = SDCARDFS_SB(mnt->mnt_sb);
 	struct sdcardfs_mount_options *opts = &sbi->options;
 
 	if (opts->fs_low_uid != 0)
 		seq_printf(m, ",low_uid=%u", opts->fs_low_uid);
 	if (opts->fs_low_gid != 0)
-		seq_printf(m, ",low_gid=%u", opts->fs_low_gid);
-	if (opts->gid != 0)
-		seq_printf(m, ",gid=%u", opts->gid);
-	if (opts->userid != 0)
-		seq_printf(m, ",userid=%u", opts->userid);
-	if (opts->multi_user)
-		seq_printf(m, ",multi_user");
-	if (opts->mask != 0)
-		seq_printf(m, ",mask=%04o", opts->mask);
+		seq_printf(m, ",gid=%u", opts->fs_low_gid);
+
+	if (opts->derive == DERIVE_NONE)
+		seq_printf(m, ",derive=none");
+	else if (opts->derive == DERIVE_LEGACY)
+		seq_printf(m, ",derive=legacy");
+	else if (opts->derive == DERIVE_UNIFIED)
+		seq_printf(m, ",derive=unified");
+
 	if (opts->reserved_mb != 0)
 		seq_printf(m, ",reserved=%uMB", opts->reserved_mb);
 
