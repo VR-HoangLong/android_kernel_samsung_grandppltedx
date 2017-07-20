@@ -34,10 +34,7 @@ enum {
 	Opt_multiuser,
 	Opt_userid,
 	Opt_reserved_mb,
-	Opt_mask,
-	Opt_multi_user,
-	Opt_label,
-	Opt_type,
+	Opt_gid_derivation,
 	Opt_err,
 };
 
@@ -49,6 +46,7 @@ static const match_table_t sdcardfs_tokens = {
 	{Opt_mask, "mask=%u"},
 	{Opt_userid, "userid=%d"},
 	{Opt_multiuser, "multiuser"},
+	{Opt_gid_derivation, "derive_gid"},
 	{Opt_reserved_mb, "reserved_mb=%u"},
 	{Opt_mask, "mask=%o"},
 	{Opt_multi_user, "multi_user"},
@@ -75,12 +73,8 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 	vfsopts->gid = 0;
 	/* by default, 0MB is reserved */
 	opts->reserved_mb = 0;
-	/* by default, mask is 0 */
-	opts->mask = 0;
-	/* by default, multi_user is false */
-	opts->multi_user = false;
-	opts->label = NULL;
-	opts->type = TYPE_NONE;
+	/* by default, gid derivation is off */
+	opts->gid_derivation = false;
 
 	*debug = 0;
 
@@ -132,36 +126,8 @@ static int parse_options(struct super_block *sb, char *options, int silent,
 				return 0;
 			opts->reserved_mb = option;
 			break;
-		case Opt_mask:
-			if (match_octal(&args[0], &option))
-				goto invalid_option;
-			opts->mask = option;
-			break;
-		case Opt_multi_user:
-			opts->multi_user = true;
-			break;
-		case Opt_label:
-			label = match_strdup(&args[0]);
-			if (!label)
-				return -ENOMEM;
-			opts->label = label;
-			break;
-		case Opt_type:
-			string_option = match_strdup(&args[0]);
-			if (!string_option)
-				return -ENOMEM;
-			if (!strcmp("default", string_option)) {
-				opts->type = TYPE_DEFAULT;
-			} else if (!strcmp("read", string_option)) {
-				opts->type = TYPE_READ;
-			} else if (!strcmp("write", string_option)) {
-				opts->type = TYPE_WRITE;
-			} else {
-				kfree(string_option);
-				goto invalid_option;
-			}
-			kfree(string_option);
-			break;
+		case Opt_gid_derivation:
+			opts->gid_derivation = true;
 		/* unknown option */
 		default:
 			if (!silent)
