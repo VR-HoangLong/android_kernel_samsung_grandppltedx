@@ -232,10 +232,7 @@ struct sdcardfs_mount_options {
 	bool gid_derivation;
 	bool default_normal;
 	unsigned int reserved_mb;
-	mode_t mask;
-	bool multi_user;
-	char *label;
-	type_t type;
+	bool nocache;
 };
 
 struct sdcardfs_vfsmount_options {
