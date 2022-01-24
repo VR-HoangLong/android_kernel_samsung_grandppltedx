@@ -682,7 +682,7 @@ static int sdcardfs_setattr(struct vfsmount *mnt, struct dentry *dentry, struct 
 	 */
 	if (ia->ia_valid & ATTR_SIZE) {
 		err = inode_newsize_ok(&tmp, ia->ia_size);
-		if (err) {
+		if (err)
 			goto out;
 		truncate_setsize(inode, ia->ia_size);
 	}
