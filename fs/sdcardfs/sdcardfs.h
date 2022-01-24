@@ -637,11 +637,11 @@ static inline int check_min_free_space(struct dentry *dentry, size_t size, int d
 		sdcardfs_put_lower_path(dentry, &lower_path);
 	
 		if (unlikely(err))
-			goto out_invalid;
+			return 0;
 	
 		/* Invalid statfs informations. */
 		if (unlikely(statfs.f_bsize == 0))
-			goto out_invalid;
+			return 0;
 	
 		/* if you are checking directory, set size to f_bsize. */
 		if (unlikely(dir))
@@ -652,14 +652,16 @@ static inline int check_min_free_space(struct dentry *dentry, size_t size, int d
 	
 		/* not enough space */
 		if ((u64)size > avail)
-			goto out_nospc;
+			return 0;
 	
 		/* enough space */
 		if ((avail - size) > (sbi->options.reserved_mb * 1024 * 1024))
 			return 1;
-		goto out_nospc;
+
+		return 0;
 	} else
 		return 1;
+}
 
 /*
  * Copies attrs and maintains sdcardfs managed attrs

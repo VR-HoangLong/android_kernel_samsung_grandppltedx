@@ -825,59 +825,6 @@ EXPORT_SYMBOL(finish_no_open);
 /**
  * vfs_open - open the file at the given path
  * @path: path to open
- * @file: newly allocated file with f_flag initialized
- * @cred: credentials to use
- */
-int vfs_open(const struct path *path, struct file *file,
-	     const struct cred *cred)
-{
-	struct dentry *dentry = path->dentry;
-	struct inode *inode = path->dentry->d_inode;
-
-	file->f_path = *path;
-	if (dentry->d_flags & DCACHE_OP_SELECT_INODE) {
-		//inode = dentry->d_op->d_select_inode(dentry, file->f_flags);
-		if (IS_ERR(inode))
-			return PTR_ERR(inode);
-	}
-
-	return do_dentry_open(file, inode, NULL, cred);
-}
-
-struct file *dentry_open(const struct path *path, int flags,
-			 const struct cred *cred)
-{
-	int error;
-	struct file *f;
-
-	validate_creds(cred);
-
-	/* We must always pass in a valid mount pointer. */
-	BUG_ON(!path->mnt);
-
-	f = get_empty_filp();
-	if (!IS_ERR(f)) {
-		f->f_flags = flags;
-		error = vfs_open(path, f, cred);
-		if (!error) {
-			/* from now on we need fput() to dispose of f */
-			error = open_check_o_direct(f);
-			if (error) {
-				fput(f);
-				f = ERR_PTR(error);
-			}
-		} else { 
-			put_filp(f);
-			f = ERR_PTR(error);
-		}
-	}
-	return f;
-}
-EXPORT_SYMBOL(dentry_open);
-
-/**
- * vfs_open - open the file at the given path
- * @path: path to open
  * @filp: newly allocated file with f_flag initialized
  * @cred: credentials to use
  */
