@@ -464,5 +464,4 @@ const struct file_operations sdcardfs_dir_fops = {
 	.flush		= sdcardfs_flush,
 	.fsync		= sdcardfs_fsync,
 	.fasync		= sdcardfs_fasync,
-	.get_lower_file = sdcardfs_get_lower_file,
 };
