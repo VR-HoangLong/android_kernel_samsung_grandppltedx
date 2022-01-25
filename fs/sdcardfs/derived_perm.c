@@ -146,6 +146,7 @@ void get_derived_permission_new(struct dentry *parent, struct dentry *dentry,
 		set_top(info, parent_info);
 		break;
 	}
+}
 
 void get_derived_permission(struct dentry *parent, struct dentry *dentry)
 {
